@@ -15,34 +15,49 @@ library(tidyverse)
 library(sf)
 library(NPSpecies)
 library(tigris)
+
+default_crs = sf::st_crs(4326)
 ```
 
 ``` {r read_data}
 # load nps species data
 nps_species_data <- NPSpecies::species %>%
-  rename(unit_code = ParkCode) %>% 
+  rename(unit_code = ParkCode) %>%
   rename_with(str_to_lower)
 
-# park boundary data
-park_bounds <- st_read("data/admin_bounds.gdb/") %>% 
+# above now replaced by output of make_nps_unit_metadata.tsv script
+nps_meta <- read_tsv("data/nps_unit_metadata.tsv")
+```
+
+``` {r park_boundary_data}
+# only necessary if you want multipolygons of park boundaries
+# otherwise, centroid lat/lon of each unit saved in data/nps_unit_metadata.tsv
+park_bounds <- st_read("data/admin_bounds.gdb/") %>%
   st_transform("+proj=longlat +ellps=WGS84 +datum=WGS84") %>%
   # cast to multipolygon so st_make_valid will work
   mutate(shape = st_cast(shape, to = "MULTIPOLYGON")) %>%
   # make valid to fix overlapping edges
-  mutate(shape = st_make_valid(shape)) %>% 
+  mutate(shape = st_make_valid(shape)) %>%
   mutate(centroid = st_centroid(shape, of_largest_polygon = T),
          lon = st_coordinates(centroid)[, 1],
          lat = st_coordinates(centroid)[, 2])
-# subset to geo data without sf geometries
-geo_small <- park_bounds %>%
-  select(unit_code, state, region, unit_type, shape_Area, lat, lon)
-```
 
-``` {r practice mapping}
+# map saguaro np unit boundaries
+counties_az <- tigris::counties(state = "AZ")
 saguaro <- park_bounds %>% 
   filter(unit_code == "SAGU")
 ggplot() +
-  geom_sf(data = park_bounds %>% filter(unit_code == "SAGU"))
+  geom_sf(data = counties_az, fill = "white") +
+  geom_sf(data = saguaro, fill = "#d2925a") +
+  coord_sf(xlim = c(-110, -112), ylim = c(31.5, 33))
+
+az_units <- park_bounds %>% 
+  filter(state == "AZ")
+
+```
+
+``` {r practice mapping}
+
 # plot centroids of all parks
 states <- tigris::states()
 park_bounds_point_only <- park_bounds %>% 
