@@ -15,6 +15,7 @@ library(tidyverse)
 library(sf)
 library(NPSpecies)
 library(tigris)
+library(leaflet)
 
 default_crs = sf::st_crs(4326)
 ```
@@ -40,7 +41,8 @@ park_bounds <- st_read("data/admin_bounds.gdb/") %>%
   mutate(shape = st_make_valid(shape)) %>%
   mutate(centroid = st_centroid(shape, of_largest_polygon = T),
          lon = st_coordinates(centroid)[, 1],
-         lat = st_coordinates(centroid)[, 2])
+         lat = st_coordinates(centroid)[, 2]) %>% 
+  rename(geometry = shape)
 
 # map saguaro np unit boundaries
 counties_az <- tigris::counties(state = "AZ")
@@ -53,11 +55,13 @@ ggplot() +
 
 az_units <- park_bounds %>% 
   filter(state == "AZ")
-
+leaflet(park_bounds) %>%
+  setView(lng = -97, lat = 40, zoom = 04) %>% 
+  addProviderTiles("Stadia.AlidadeSmooth") %>% 
+  addPolygons(color = "#d2925a", fillOpacity = 0.9, label = ~unit_name)
 ```
 
-``` {r practice mapping}
-
+``` {r practice_mapping_centroids}
 # plot centroids of all parks
 states <- tigris::states()
 park_bounds_point_only <- park_bounds %>% 
