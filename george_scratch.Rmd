@@ -64,11 +64,33 @@ leaflet(park_bounds) %>%
 ``` {r practice_mapping_centroids}
 # plot centroids of all parks
 states <- tigris::states()
+coast <- tigris::coastline() %>% 
+  st_simplify()
 park_bounds_point_only <- park_bounds %>% 
   st_drop_geometry() %>%
   select(-centroid) %>% 
   st_as_sf(coords = c("lon", "lat"), crs = 4326)
 ggplot() +
-  geom_sf(data = states) +
-  geom_sf(data = park_bounds_point_only)
+  geom_sf(data = states, size = 0.5) +
+  geom_sf(data = coast, size = 0.5) +
+  geom_sf(data = park_bounds_point_only, color = "#d2925a") +
+  coord_sf(xlim = c(-130, -60), ylim = c(24, 50)) +
+  theme_bw()
+```
+
+``` {r species_data_exploration}
+unit_by_cat <- nps_species_data %>% 
+  group_by(unit_code, unit_name = parkname, categoryname) %>% 
+  summarise(count = n())
+unit_overall <- unit_by_cat %>% 
+  group_by(unit_code, unit_name) %>% 
+  summarise(count = sum(count)) %>% 
+  arrange(desc(count))
+birds_by_park <- unit_by_cat %>% 
+  filter(categoryname == "Bird") %>% 
+  arrange(desc(count))
+
+death_valley_birds <- nps_species_data %>%
+  filter(unit_code == "DEVA", categoryname == "Bird") %>% 
+  filter(observations == 0 | recordstatus == "Approved")
 ```
